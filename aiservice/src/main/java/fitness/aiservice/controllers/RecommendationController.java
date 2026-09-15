@@ -18,7 +18,7 @@ import java.util.Optional;
 public class RecommendationController {
     private final RecommendationService recommendationService;
 
-    @GetMapping("/user/{activityId}")
+    @GetMapping("/activity/{activityId}")
     public ResponseEntity<Recommendations> getActivityRecommendations(@PathVariable String activityId){
         return ResponseEntity.ok(recommendationService.getActivityRecommendation(activityId));
     }
