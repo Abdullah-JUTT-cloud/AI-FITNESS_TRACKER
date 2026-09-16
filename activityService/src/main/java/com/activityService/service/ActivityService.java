@@ -5,7 +5,10 @@ import com.activityService.dto.ActivityResponse;
 import com.activityService.models.Activity;
 import com.activityService.repository.ActivityRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,9 +16,16 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ActivityService {
     private final ActivityRepository activityRepository;
     private final UserValidationService userValidationService;
+    private final RabbitTemplate rabbitTemplate;
+
+    @Value("${rabbitmq.exchange.name}")
+    private String exchange;
+    @Value("${rabbitmq.routing.key}")
+    private String routingKey;
     public ActivityResponse trackActivity(ActivityRequest request) {
         boolean isValidated=userValidationService.validateUser(request.getUserId());
         if(!isValidated){
@@ -31,6 +41,11 @@ public class ActivityService {
                 .build();
 
         Activity savedActivity=activityRepository.save(activity);
+        try{
+            rabbitTemplate.convertAndSend(exchange,routingKey,savedActivity);
+        }catch (Exception e){
+            log.error("Error sending activity into RABBITMQ",e);
+        }
         return mapToRes(savedActivity);
     }
     private ActivityResponse mapToRes(Activity activity){
